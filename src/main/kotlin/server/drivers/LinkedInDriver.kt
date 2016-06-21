@@ -1,4 +1,4 @@
-package drivers
+package server.drivers
 
 import com.github.scribejava.apis.LinkedInApi
 import com.github.scribejava.core.builder.ServiceBuilder
