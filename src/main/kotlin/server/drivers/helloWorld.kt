@@ -28,6 +28,6 @@ fun main(args: Array<String>) {
 
 
     println(getGreeting())
-//    val server = LinFamilyServer()
-//    server.StartServer()
+    val server = LinFamilyServer()
+    server.StartServer()
 }
