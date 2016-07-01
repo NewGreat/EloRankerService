@@ -1,11 +1,7 @@
 package server
 
 import org.wasabi.app.AppServer
-import org.wasabi.interceptors.CORSInterceptor
-import org.wasabi.interceptors.enableAutoOptions
-import org.wasabi.interceptors.enableCORS
 import org.wasabi.interceptors.enableCORSGlobally
-import org.wasabi.protocol.http.CORSEntry
 import org.wasabi.routing.routeHandler
 import server.repositories.MySqlDataRepository
 
@@ -16,20 +12,27 @@ class LinFamilyServer {
     private val _dataRepository: MySqlDataRepository = MySqlDataRepository()
 
     fun StartServer(): Unit {
-        val server = AppServer()
-//        server.enableCORSGlobally()
-//        server.enableAutoOptions()
+        var server = AppServer()
+//        server.enableContentNegotiation()
+//        server.enableMyAutoOptions()
 //        val corsEntry = CORSEntry (
 //            path = "*",
 //            origins = "*",
-//            methods = "GET, POST, PUT, DELETE, OPTIONS",
+//            methods = "GET,HEAD,OPTIONS,POST",
 //            headers = "Origin, X-Requested-With, Content-Type, Accept, Access-Control-Allow-Origin",
 //            credentials = ""
 //        )
-//        server.enableCORS(arrayListOf(corsEntry))
-        server.options("/user", sendCors)
+
         server.get("/", { response.send("Hello World!") })
         server.get("/user", getUser)
+
+        // Enable CORS and create an OPTIONS route for every existing route
+        server.enableCORSGlobally()
+        server.routes.map {
+            it.path
+        }.forEach {
+            server.options(it, sendCors)
+        }
         server.start()
     }
 
@@ -43,7 +46,6 @@ class LinFamilyServer {
 
     val getUser = routeHandler {
         val userId = request.queryParams["userId"]?.toInt() ?: throw Exception("UserId cannot be null")
-        response.addRawHeader("Access-Control-Allow-Origin", "*")
         response.send(_dataRepository.GetUser(userId), "application/json")
     }
 }
