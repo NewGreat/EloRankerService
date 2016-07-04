@@ -2,6 +2,7 @@ package server
 
 import org.wasabi.app.AppServer
 import org.wasabi.interceptors.enableCORSGlobally
+import org.wasabi.protocol.http.Response
 import org.wasabi.routing.routeHandler
 import server.repositories.MySqlDataRepository
 
@@ -28,24 +29,29 @@ class LinFamilyServer {
 
         // Enable CORS and create an OPTIONS route for every existing route
         server.enableCORSGlobally()
-        server.routes.map {
-            it.path
-        }.forEach {
-            server.options(it, sendCors)
-        }
+//        server.routes.map {
+//            it.path
+//        }.forEach {
+//            server.options(it, sendCors)
+//        }
         server.start()
     }
 
     val sendCors = routeHandler {
-        response.addRawHeader("Access-Control-Allow-Origin", "*")
-        response.addRawHeader("Access-Control-Allow-Credentials", "true");
-        response.addRawHeader("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT");
-        response.addRawHeader("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers");
+        addHeaders(response)
         response.send("")
+    }
+
+    fun addHeaders(response: Response) {
+        response.addRawHeader("Access-Control-Allow-Origin", "*")
+        response.addRawHeader("Access-Control-Allow-Credentials", "true")
+        response.addRawHeader("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT")
+        response.addRawHeader("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers")
     }
 
     val getUser = routeHandler {
         val userId = request.queryParams["userId"]?.toInt() ?: throw Exception("UserId cannot be null")
+        addHeaders(response)
         response.send(_dataRepository.GetUser(userId), "application/json")
     }
 }
