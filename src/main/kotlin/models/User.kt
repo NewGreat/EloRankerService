@@ -1,4 +1,4 @@
-package server.models
+package models
 
 /**
  * Created by william on 6/20/16.
