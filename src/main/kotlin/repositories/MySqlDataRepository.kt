@@ -2,6 +2,7 @@ package repositories
 
 import models.League
 import models.LeaguePlayer
+import models.Rating
 import org.sql2o.Sql2o
 import models.User
 import org.joda.time.DateTime
@@ -14,7 +15,7 @@ class MySqlDataRepository {
 
     private val DB_URL: String = "mysql://localhost/EloRanker"
     private val DB_USERNAME: String = "root"
-    private val DB_PASSWORD: String = "" // Add the password
+    private val DB_PASSWORD: String = ""
     private val SELECT_USER: String = "SELECT UserId, FirstName, LastName, Email FROM User"
 
     constructor() {
@@ -99,8 +100,8 @@ class MySqlDataRepository {
     fun GetLeaguePlayer(leagueId: Int, leaguePlayerName: String): LeaguePlayer? {
         val sql2o = CreateDbDriver()
         var con = sql2o.open()
-        val leaguePlayer = con.createQuery("SELECT LeaguePlayerId, LeagueId, UserId, LeaguePlayerName, Rating, GamesPlayed " +
-            "FROM EloRanker.LeaguePlayer " +
+        val leaguePlayer = con.createQuery("SELECT LeaguePlayerId, LeagueId, UserId, LeaguePlayerName " +
+            "FROM EloRanker.LeaguePlayer lp " +
             "WHERE LeagueId = :pLeagueId AND LeaguePlayerName = :pLeaguePlayerName")
             .addParameter("pLeagueId", leagueId)
             .addParameter("pLeaguePlayerName", leaguePlayerName)
@@ -111,13 +112,37 @@ class MySqlDataRepository {
     fun GetLeaguePlayer(leagueId: Int, leaguePlayerId: Int): LeaguePlayer? {
         val sql2o = CreateDbDriver()
         var con = sql2o.open()
-        val leaguePlayer = con.createQuery("SELECT LeaguePlayerId, LeagueId, UserId, LeaguePlayerName, Rating, GamesPlayed " +
+        val leaguePlayer = con.createQuery("SELECT LeaguePlayerId, LeagueId, UserId, LeaguePlayerName " +
             "FROM EloRanker.LeaguePlayer " +
             "WHERE LeagueId = :pLeagueId AND LeaguePlayerId = :pLeaguePlayerId")
             .addParameter("pLeagueId", leagueId)
             .addParameter("pLeaguePlayerId", leaguePlayerId)
             .executeAndFetchFirst(LeaguePlayer::class.java)
         return leaguePlayer
+    }
+
+    fun GetLeaguePlayerRating(leaguePlayerId: Int) : Rating {
+        val sql2o = CreateDbDriver()
+        var con = sql2o.open()
+        val rating = con.createQuery("SELECT Rating, GamesPlayed " +
+            "FROM EloRanker.Rating " +
+            "WHERE LeaguePlayerId = :pLeaguePlayerId " +
+            "ORDER BY GameDate DESC")
+            .addParameter("pLeaguePlayerId", leaguePlayerId)
+            .executeAndFetchFirst(Rating::class.java)
+        return rating
+    }
+
+    fun UpdateLeaguePlayerRating(leaguePlayerId: Int, gameDate: DateTime, newRating: Rating) {
+        val sql2o = CreateDbDriver()
+        var con = sql2o.open()
+        con.createQuery("INSERT INTO EloRanker.Rating (LeaguePlayerId, GameDate, Rating, GamesPlayed) " +
+            "VALUES (:pLeaguePlayerId, :pGameDate, :pRating, :pGamesPlayed)")
+            .addParameter("pLeaguePlayerId", leaguePlayerId)
+            .addParameter("pGameDate", gameDate)
+            .addParameter("pRating", newRating.Rating)
+            .addParameter("pGamesPlayed", newRating.GamesPlayed)
+            .executeUpdate()
     }
 
     fun GetFullLeagueData(leagueId: Int): League {
