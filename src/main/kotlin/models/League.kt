@@ -8,6 +8,7 @@ data class League (
     val LeagueId: Int,
     val Name: String,
     val Description: String,
+
     // League metadata
     val InitialRating: Int,
     val KFactor: Int,
