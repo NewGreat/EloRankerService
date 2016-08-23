@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS EloRanker.LeaguePlayer (
 	LeagueId INT NOT NULL,
 	UserId INT,
 	LeaguePlayerName VARCHAR(63) NOT NULL,
+	RatingUpdated DATETIME NOT NULL,
 	PRIMARY KEY (LeaguePlayerId),
 	INDEX `LeagueIdLeaguePlayerName` (LeaguePlayerId, LeaguePlayerName),
 	CONSTRAINT leagueId_playerName UNIQUE (LeagueId, LeaguePlayerName)
