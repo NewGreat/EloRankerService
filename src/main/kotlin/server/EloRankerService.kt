@@ -2,17 +2,17 @@ package server
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
-import com.fasterxml.jackson.module.kotlin.*
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import helpers.ParseDateTime
 import io.netty.handler.codec.http.HttpMethod
-import managers.*
-import kotlin.collections.*
+import managers.AddLeaguePlayer
+import managers.RecordLeagueGameResults
 import models.GameResult
-import org.joda.time.DateTimeZone
-import org.joda.time.format.DateTimeFormat
 import org.wasabi.app.AppServer
 import org.wasabi.interceptors.enableCORS
 import org.wasabi.protocol.http.CORSEntry
+import org.wasabi.protocol.http.StatusCodes
 import org.wasabi.routing.routeHandler
 
 /**
@@ -31,6 +31,10 @@ fun StartServer(): Unit {
     server.get("/", { response.send("Hello World!") })
     server.post("/games/record", RecordLeagueGameResults)
     server.post("/player/create", AddLeaguePlayer)
+    server.exception(Exception::class, {
+        response.setStatus(StatusCodes.PreconditionFailed)
+        response.send("Error: ${exception.message}")
+    })
 
     // Enable CORS and create an OPTIONS route for every existing route
     val corsEntry = CORSEntry (
