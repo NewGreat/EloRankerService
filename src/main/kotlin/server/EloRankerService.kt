@@ -3,10 +3,12 @@ package server
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.module.kotlin.*
+import helpers.ParseDateTime
 import io.netty.handler.codec.http.HttpMethod
 import managers.*
 import kotlin.collections.*
 import models.GameResult
+import org.joda.time.DateTimeZone
 import org.joda.time.format.DateTimeFormat
 import org.wasabi.app.AppServer
 import org.wasabi.interceptors.enableCORS
@@ -47,8 +49,7 @@ val AddLeaguePlayer = routeHandler {
     val leaguePlayerName = request.bodyParams["leaguePlayerName"] as String
     val userId = request.bodyParams["userId"] as Int?
     val joinDateString = request.bodyParams["joinDate"] as String
-    val formatter = DateTimeFormat.forPattern("yyyy/MM/dd HH:mm:ss")
-    val joinDate = formatter.parseDateTime(joinDateString)
+    val joinDate = ParseDateTime(joinDateString)
 
     AddLeaguePlayer(leagueId, leaguePlayerName, userId, joinDate)
     response.send("Added $leaguePlayerName to League $leagueId", "application/json")
@@ -57,8 +58,7 @@ val AddLeaguePlayer = routeHandler {
 val RecordLeagueGameResults = routeHandler {
     val leagueId = request.bodyParams["leagueId"] as Int
     val gameDateString = request.bodyParams["gameDate"] as String
-    val formatter = DateTimeFormat.forPattern("yyyy/MM/dd HH:mm:ss")
-    val gameDate = formatter.parseDateTime(gameDateString)
+    val gameDate = ParseDateTime(gameDateString)
     val json = mapper.writeValueAsString(request.bodyParams["gameResults"])
     val gameResults : List<GameResult> = mapper.readValue(json)
 

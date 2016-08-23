@@ -9,9 +9,6 @@ import org.sql2o.Query
  * Created by william on 8/17/16.
  */
 
-private val DB_URL: String = "mysql://localhost/EloRanker"
-private val DB_USERNAME: String = "root"
-private val DB_PASSWORD: String = ""
 private val SELECT_USER: String = "SELECT UserId, FirstName, LastName, Email FROM User"
 
 private fun CreateDbDriver(): Sql2o {

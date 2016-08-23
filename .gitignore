@@ -2,3 +2,4 @@
 .gradle
 .idea
 /build
+/src/main/kotlin/repositories/DB_Constants.kt
