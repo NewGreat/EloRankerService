@@ -15,6 +15,7 @@ import org.wasabi.interceptors.enableCORS
 import org.wasabi.protocol.http.CORSEntry
 import org.wasabi.protocol.http.StatusCodes
 import org.wasabi.routing.routeHandler
+import repositories.GetGameResultsOnOrAfterDate
 import repositories.GetRatingsForLeagueOnDate
 
 /**
@@ -78,5 +79,7 @@ val RecalculateRatings = routeHandler {
     val recalculateDateString = request.bodyParams["recalculateDate"] as String
     val recalculateDate = ParseDateTime(recalculateDateString)
     val r = GetRatingsForLeagueOnDate(leagueId, recalculateDate)
+    val g = GetGameResultsOnOrAfterDate(leagueId, recalculateDate)
     println(r)
+    println(g)
 }

@@ -173,7 +173,7 @@ fun GetGameResultsOnOrAfterDate(leagueId: Int, dateTime: DateTime) : List<GameRe
         SELECT LeagueId, FirstLeaguePlayerId, SecondLeaguePlayerId, Result, GameDate
         FROM EloRanker.GameResult
         WHERE LeagueId = :pLeagueId
-        AND GameDate >= :pGameDate;
+        AND GameDate >= :pDateTime;
         """)
         .addParameter("pLeagueId", leagueId)
         .addParameter("pDateTime", dateTime)
