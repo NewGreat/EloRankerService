@@ -7,13 +7,15 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import helpers.ParseDateTime
 import io.netty.handler.codec.http.HttpMethod
 import managers.AddLeaguePlayer
+import managers.ConvertToGameResults
 import managers.RecordLeagueGameResults
-import models.GameResult
+import models.contracts.GameResultCommand
 import org.wasabi.app.AppServer
 import org.wasabi.interceptors.enableCORS
 import org.wasabi.protocol.http.CORSEntry
 import org.wasabi.protocol.http.StatusCodes
 import org.wasabi.routing.routeHandler
+import repositories.GetRatingsForLeagueOnDate
 
 /**
  * Created by william on 8/17/16.
@@ -31,6 +33,7 @@ fun StartServer(): Unit {
     server.get("/", { response.send("Hello World!") })
     server.post("/games/record", RecordLeagueGameResults)
     server.post("/player/create", AddLeaguePlayer)
+    server.post("/ratings/recalculate", RecalculateRatings)
     server.exception(Exception::class, {
         response.setStatus(StatusCodes.PreconditionFailed)
         response.send("Error: ${exception.message}")
@@ -64,8 +67,16 @@ val RecordLeagueGameResults = routeHandler {
     val gameDateString = request.bodyParams["gameDate"] as String
     val gameDate = ParseDateTime(gameDateString)
     val json = mapper.writeValueAsString(request.bodyParams["gameResults"])
-    val gameResults : List<GameResult> = mapper.readValue(json)
-
-    RecordLeagueGameResults(leagueId, gameDate, gameResults)
+    val gameResultCommands : List<GameResultCommand> = mapper.readValue(json)
+    val gameResults = ConvertToGameResults(leagueId, gameDate, gameResultCommands)
+    RecordLeagueGameResults(gameResults)
     response.send("Recorded game results for League $leagueId", "application/json")
+}
+
+val RecalculateRatings = routeHandler {
+    val leagueId = request.bodyParams["leagueId"] as Int
+    val recalculateDateString = request.bodyParams["recalculateDate"] as String
+    val recalculateDate = ParseDateTime(recalculateDateString)
+    val r = GetRatingsForLeagueOnDate(leagueId, recalculateDate)
+    println(r)
 }

@@ -3,7 +3,12 @@ package repositories
 import models.*
 import org.sql2o.Sql2o
 import org.joda.time.DateTime
+import org.joda.time.DateTimeZone
+import org.joda.time.format.DateTimeFormat
 import org.sql2o.Query
+import org.sql2o.converters.Converter
+import org.sql2o.converters.joda.DateTimeConverter
+import org.sql2o.quirks.NoQuirks
 
 /**
  * Created by william on 8/17/16.
@@ -12,7 +17,12 @@ import org.sql2o.Query
 private val SELECT_USER: String = "SELECT UserId, FirstName, LastName, Email FROM User"
 
 private fun CreateDbDriver(): Sql2o {
-    return Sql2o(DB_URL, DB_USERNAME, DB_PASSWORD)
+    val q = NoQuirks(
+        hashMapOf(
+            Pair(DateTime::class.java, DateTimeConverter(DateTimeZone.getDefault()))
+        ) as Map<Class<Any>, Converter<Any>>?
+    )
+    return Sql2o(DB_URL, DB_USERNAME, DB_PASSWORD, q)
 }
 
 fun GetUsers(userIds: List<Int>): List<User> {
@@ -122,21 +132,70 @@ fun GetLeaguePlayerRating(leaguePlayerId: Int) : Rating {
     return rating
 }
 
-fun UpdateLeaguePlayerRating(leaguePlayerId: Int, gameDate: DateTime, newRating: Rating) {
+fun GetRatingsForLeagueOnDate(leagueId: Int, dateTime: DateTime) : List<Rating> {
+    val sql2o = CreateDbDriver()
+    var con = sql2o.open()
+    val ratings = con.createQuery("""
+        SELECT r.LeaguePlayerId, r.GameDate, r.Rating, r.GamesPlayed
+        FROM EloRanker.Rating r
+        JOIN EloRanker.LeaguePlayer lp
+        ON r.LeaguePlayerId = lp.LeaguePlayerId
+        WHERE r.GameDate = (SELECT MAX(r2.GameDate)
+        FROM EloRanker.Rating r2
+        JOIN EloRanker.LeaguePlayer lp2
+        ON r2.LeaguePlayerId = lp2.LeaguePlayerId
+        WHERE lp2.LeagueId = :pLeagueId
+        AND lp2.LeaguePlayerId = lp.LeaguePlayerId
+        AND r2.GameDate <= :pDateTime);
+        """)
+        .addParameter("pLeagueId", leagueId)
+        .addParameter("pDateTime", dateTime)
+        .executeAndFetch(Rating::class.java)
+    return ratings
+}
+
+fun DeleteRatingsAfterDate(leagueId: Int, dateTime: DateTime) {
+    val sql2o = CreateDbDriver()
+    var con = sql2o.open()
+    con.createQuery("""
+        DELETE FROM EloRanker.Rating
+        WHERE LeagueId = :pLeagueId
+        AND GameDate > :pDateTime
+        """)
+        .addParameter("pLeagueId", leagueId)
+        .addParameter("pDateTime", dateTime)
+}
+
+fun GetGameResultsOnOrAfterDate(leagueId: Int, dateTime: DateTime) : List<GameResult> {
+    val sql2o = CreateDbDriver()
+    var con = sql2o.open()
+    val gameResults = con.createQuery("""
+        SELECT LeagueId, FirstLeaguePlayerId, SecondLeaguePlayerId, Result, GameDate
+        FROM EloRanker.GameResult
+        WHERE LeagueId = :pLeagueId
+        AND GameDate >= :pGameDate;
+        """)
+        .addParameter("pLeagueId", leagueId)
+        .addParameter("pDateTime", dateTime)
+        .executeAndFetch(GameResult::class.java)
+    return gameResults
+}
+
+fun UpdateLeaguePlayerRating(newRating: Rating) {
     val sql2o = CreateDbDriver()
     var con = sql2o.open()
     con.createQuery("INSERT INTO EloRanker.Rating (LeaguePlayerId, GameDate, Rating, GamesPlayed) " +
         "VALUES (:pLeaguePlayerId, :pGameDate, :pRating, :pGamesPlayed)")
-        .addParameter("pLeaguePlayerId", leaguePlayerId)
-        .addParameter("pGameDate", gameDate)
+        .addParameter("pLeaguePlayerId", newRating.LeaguePlayerId)
+        .addParameter("pGameDate", newRating.GameDate)
         .addParameter("pRating", newRating.Rating)
         .addParameter("pGamesPlayed", newRating.GamesPlayed)
         .executeUpdate()
 
     con.createQuery("UPDATE EloRanker.LeaguePlayer SET RatingUpdated = :pRatingUpdated " +
         "WHERE LeaguePlayerId = :pLeaguePlayerId")
-        .addParameter("pRatingUpdated", gameDate)
-        .addParameter("pLeaguePlayerId", leaguePlayerId)
+        .addParameter("pRatingUpdated", newRating.GameDate)
+        .addParameter("pLeaguePlayerId", newRating.LeaguePlayerId)
         .executeUpdate()
 
 }
