@@ -1,10 +1,11 @@
 package managers
 
 import helpers.IsPositiveInteger
-import models.*
-import models.contracts.GameResultCommand
+import dataClasses.models.*
+import contracts.GameResultCommand
 import org.joda.time.DateTime
 import repositories.*
+import org.funktionale.memoization.memoize
 
 /**
  * Created by william on 8/18/16.
@@ -49,36 +50,29 @@ fun ConvertToGameResults(leagueId: Int, gameDate: DateTime, gameResultCommands: 
 }
 
 fun RecordLeagueGameResults(gameResults: List<GameResult>): Unit {
-    for(gameResult in gameResults) {
-        RecordGameResult(
-            GetFullLeagueData(gameResult.LeagueId),
-            gameResult.FirstLeaguePlayerId,
-            gameResult.SecondLeaguePlayerId,
-            gameResult.Result,
-            gameResult.GameDate
-        )
-    }
+    val getLeague = { leagueId: Int -> GetFullLeagueData(leagueId)}.memoize()
+    gameResults.forEach { RecordGameResult(it, getLeague(it.LeagueId)) }
 }
 
-fun RecordGameResult(league: League, leaguePlayerId1: Int, leaguePlayerId2: Int, result: Result, gameDate: DateTime): Unit {
-    InsertGameResult(league.LeagueId, leaguePlayerId1, leaguePlayerId2, result, gameDate)
-    val player1Rating = GetLeaguePlayerRating(leaguePlayerId1)
-    val player2Rating = GetLeaguePlayerRating(leaguePlayerId2)
+fun RecordGameResult(gameResult: GameResult, league: League): Unit {
+    InsertGameResult(gameResult)
+    val player1Rating = GetLeaguePlayerRating(gameResult.FirstLeaguePlayerId)
+    val player2Rating = GetLeaguePlayerRating(gameResult.SecondLeaguePlayerId)
     val newPlayer1Rating = Rating (
         Rating = CalculateNewRating(player1Rating.Rating, player2Rating.Rating,
             if (player1Rating.GamesPlayed > league.NumProvisionalGames) league.KFactor
-            else league.ProvisionalKFactor, GetActualScore(result, true)),
+            else league.ProvisionalKFactor, GetActualScore(gameResult.Result, true)),
         GamesPlayed = player1Rating.GamesPlayed + 1,
-        GameDate = gameDate,
-        LeaguePlayerId = leaguePlayerId1
+        GameDate = gameResult.GameDate,
+        LeaguePlayerId = gameResult.FirstLeaguePlayerId
     )
     val newPlayer2Rating = Rating (
         Rating = CalculateNewRating(player2Rating.Rating, player1Rating.Rating,
             if (player2Rating.GamesPlayed > league.NumProvisionalGames) league.KFactor
-            else league.ProvisionalKFactor, GetActualScore(result, false)),
+            else league.ProvisionalKFactor, GetActualScore(gameResult.Result, false)),
         GamesPlayed = player2Rating.GamesPlayed + 1,
-        GameDate = gameDate,
-        LeaguePlayerId = leaguePlayerId2
+        GameDate = gameResult.GameDate,
+        LeaguePlayerId = gameResult.SecondLeaguePlayerId
     )
     UpdateLeaguePlayerRating(newPlayer1Rating)
     UpdateLeaguePlayerRating(newPlayer2Rating)

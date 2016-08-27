@@ -1,4 +1,4 @@
-package models
+package dataClasses.models
 
 /**
  * Created by william on 6/20/16.

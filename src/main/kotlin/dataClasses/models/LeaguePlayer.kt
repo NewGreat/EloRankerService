@@ -1,4 +1,4 @@
-package models
+package dataClasses.models
 
 import org.joda.time.DateTime
 

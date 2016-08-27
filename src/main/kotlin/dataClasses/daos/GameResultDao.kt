@@ -1,14 +1,14 @@
-package models
+package dataClasses.daos
 
 import org.joda.time.DateTime
 
 /**
- * Created by william on 8/24/16.
+ * Created by william on 8/25/16.
  */
-data class GameResult(
+data class GameResultDao(
     val LeagueId: Int,
     val FirstLeaguePlayerId: Int,
     val SecondLeaguePlayerId: Int,
-    val Result: Result,
+    val Result: Int,
     val GameDate: DateTime
 )

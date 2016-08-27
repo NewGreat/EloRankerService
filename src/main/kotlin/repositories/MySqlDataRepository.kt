@@ -1,11 +1,13 @@
 package repositories
 
-import models.*
-import org.sql2o.Sql2o
+import dataClasses.daos.GameResultDao
+import dataClasses.mappers.ToGameResult
+import dataClasses.mappers.ToGameResultDao
+import dataClasses.models.*
 import org.joda.time.DateTime
 import org.joda.time.DateTimeZone
-import org.joda.time.format.DateTimeFormat
 import org.sql2o.Query
+import org.sql2o.Sql2o
 import org.sql2o.converters.Converter
 import org.sql2o.converters.joda.DateTimeConverter
 import org.sql2o.quirks.NoQuirks
@@ -55,16 +57,17 @@ fun InsertUser(): Unit {
         .executeUpdate()
 }
 
-fun InsertGameResult(leagueId: Int, firstLeaguePlayerId: Int, secondLeaguePlayerId: Int, result: Result, gameDate: DateTime): Unit {
+fun InsertGameResult(gameResult: GameResult) : Unit {
+    val gameResultDao = ToGameResultDao(gameResult)
     val sql2o = CreateDbDriver()
     var con = sql2o.open()
     con.createQuery("INSERT INTO EloRanker.GameResult (LeagueId, FirstLeaguePlayerId, SecondLeaguePlayerId, Result, GameDate) " +
         "VALUES (:pLeagueId, :pFirstLeaguePlayerId, :pSecondLeaguePlayerId, :pResult, :pGameDate);")
-        .addParameter("pLeagueId", leagueId)
-        .addParameter("pFirstLeaguePlayerId", firstLeaguePlayerId)
-        .addParameter("pSecondLeaguePlayerId", secondLeaguePlayerId)
-        .addParameter("pResult", result.ordinal)
-        .addParameter("pGameDate", gameDate)
+        .addParameter("pLeagueId", gameResultDao.LeagueId)
+        .addParameter("pFirstLeaguePlayerId", gameResultDao.FirstLeaguePlayerId)
+        .addParameter("pSecondLeaguePlayerId", gameResultDao.SecondLeaguePlayerId)
+        .addParameter("pResult", gameResultDao.Result)
+        .addParameter("pGameDate", gameResultDao.GameDate)
         .executeUpdate()
 }
 
@@ -169,7 +172,7 @@ fun DeleteRatingsAfterDate(leagueId: Int, dateTime: DateTime) {
 fun GetGameResultsOnOrAfterDate(leagueId: Int, dateTime: DateTime) : List<GameResult> {
     val sql2o = CreateDbDriver()
     var con = sql2o.open()
-    val gameResults = con.createQuery("""
+    val gameResultDaos = con.createQuery("""
         SELECT LeagueId, FirstLeaguePlayerId, SecondLeaguePlayerId, Result, GameDate
         FROM EloRanker.GameResult
         WHERE LeagueId = :pLeagueId
@@ -177,8 +180,8 @@ fun GetGameResultsOnOrAfterDate(leagueId: Int, dateTime: DateTime) : List<GameRe
         """)
         .addParameter("pLeagueId", leagueId)
         .addParameter("pDateTime", dateTime)
-        .executeAndFetch(GameResult::class.java)
-    return gameResults
+        .executeAndFetch(GameResultDao::class.java)
+    return gameResultDaos.map { ToGameResult(it)}
 }
 
 fun UpdateLeaguePlayerRating(newRating: Rating) {

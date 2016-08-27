@@ -8,15 +8,12 @@ import helpers.ParseDateTime
 import io.netty.handler.codec.http.HttpMethod
 import managers.AddLeaguePlayer
 import managers.ConvertToGameResults
-import managers.RecordLeagueGameResults
-import models.contracts.GameResultCommand
+import contracts.GameResultCommand
 import org.wasabi.app.AppServer
 import org.wasabi.interceptors.enableCORS
 import org.wasabi.protocol.http.CORSEntry
 import org.wasabi.protocol.http.StatusCodes
 import org.wasabi.routing.routeHandler
-import repositories.GetGameResultsOnOrAfterDate
-import repositories.GetRatingsForLeagueOnDate
 
 /**
  * Created by william on 8/17/16.
@@ -70,7 +67,7 @@ val RecordLeagueGameResults = routeHandler {
     val json = mapper.writeValueAsString(request.bodyParams["gameResults"])
     val gameResultCommands : List<GameResultCommand> = mapper.readValue(json)
     val gameResults = ConvertToGameResults(leagueId, gameDate, gameResultCommands)
-    RecordLeagueGameResults(gameResults)
+    managers.RecordLeagueGameResults(gameResults)
     response.send("Recorded game results for League $leagueId", "application/json")
 }
 
@@ -78,8 +75,5 @@ val RecalculateRatings = routeHandler {
     val leagueId = request.bodyParams["leagueId"] as Int
     val recalculateDateString = request.bodyParams["recalculateDate"] as String
     val recalculateDate = ParseDateTime(recalculateDateString)
-    val r = GetRatingsForLeagueOnDate(leagueId, recalculateDate)
-    val g = GetGameResultsOnOrAfterDate(leagueId, recalculateDate)
-    println(r)
-    println(g)
+    managers.RecalculateRatings(leagueId, recalculateDate)
 }

@@ -1,4 +1,4 @@
-package models.contracts
+package contracts
 
 /**
  * Created by william on 8/19/16.
