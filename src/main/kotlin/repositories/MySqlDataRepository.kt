@@ -1,8 +1,10 @@
 package repositories
 
 import dataClasses.daos.GameResultDao
+import dataClasses.daos.RatingDao
 import dataClasses.mappers.ToGameResult
 import dataClasses.mappers.ToGameResultDao
+import dataClasses.mappers.ToRating
 import dataClasses.models.*
 import org.joda.time.DateTime
 import org.joda.time.DateTimeZone
@@ -71,6 +73,7 @@ fun InsertGameResult(gameResult: GameResult) : Unit {
         .executeUpdate()
 }
 
+// TODO: Take in a LeaguePlayer
 fun InsertLeaguePlayer(leagueId: Int, leaguePlayerName: String, userId: Int?, initialRating: Int, joinDate: DateTime){
     val sql2o = CreateDbDriver()
     var con = sql2o.open()
@@ -99,6 +102,7 @@ fun InsertLeaguePlayer(leagueId: Int, leaguePlayerName: String, userId: Int?, in
         .executeUpdate()
 }
 
+// TODO: Fetch as a LeaguePlayerDao
 fun GetLeaguePlayer(leagueId: Int, leaguePlayerName: String): LeaguePlayer? {
     val sql2o = CreateDbDriver()
     var con = sql2o.open()
@@ -111,6 +115,7 @@ fun GetLeaguePlayer(leagueId: Int, leaguePlayerName: String): LeaguePlayer? {
     return leaguePlayer
 }
 
+// TODO: Fetch as a LeaguePlayerDao
 fun GetLeaguePlayer(leagueId: Int, leaguePlayerId: Int): LeaguePlayer? {
     val sql2o = CreateDbDriver()
     var con = sql2o.open()
@@ -126,19 +131,19 @@ fun GetLeaguePlayer(leagueId: Int, leaguePlayerId: Int): LeaguePlayer? {
 fun GetLeaguePlayerRating(leaguePlayerId: Int) : Rating {
     val sql2o = CreateDbDriver()
     var con = sql2o.open()
-    val rating = con.createQuery("SELECT Rating, GamesPlayed " +
+    val ratingDao = con.createQuery("SELECT Rating, GamesPlayed " +
         "FROM EloRanker.Rating " +
         "WHERE LeaguePlayerId = :pLeaguePlayerId " +
         "ORDER BY GameDate DESC LIMIT 1")
         .addParameter("pLeaguePlayerId", leaguePlayerId)
-        .executeAndFetchFirst(Rating::class.java)
-    return rating
+        .executeAndFetchFirst(RatingDao::class.java)
+    return ToRating(ratingDao)
 }
 
 fun GetRatingsForLeagueOnDate(leagueId: Int, dateTime: DateTime) : List<Rating> {
     val sql2o = CreateDbDriver()
     var con = sql2o.open()
-    val ratings = con.createQuery("""
+    val ratingDaos = con.createQuery("""
         SELECT r.LeaguePlayerId, r.GameDate, r.Rating, r.GamesPlayed
         FROM EloRanker.Rating r
         JOIN EloRanker.LeaguePlayer lp
@@ -153,8 +158,8 @@ fun GetRatingsForLeagueOnDate(leagueId: Int, dateTime: DateTime) : List<Rating> 
         """)
         .addParameter("pLeagueId", leagueId)
         .addParameter("pDateTime", dateTime)
-        .executeAndFetch(Rating::class.java)
-    return ratings
+        .executeAndFetch(RatingDao::class.java)
+    return ratingDaos.map { ToRating(it) }
 }
 
 fun DeleteRatingsAfterDate(leagueId: Int, dateTime: DateTime) {
@@ -217,6 +222,7 @@ fun GetFullLeagueData(leagueId: Int): League {
     return league
 }
 
+// TODO: Fetch as a LeaguePlayerDao
 fun GetLeaguePlayers(leagueId: Int, leaguePlayerNames: List<String>) : List<LeaguePlayer?> {
     val sql2o = CreateDbDriver()
     var con = sql2o.open()
