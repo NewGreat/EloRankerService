@@ -1,5 +1,6 @@
 package managers
 
+import contracts.AddPlayerCommand
 import helpers.IsPositiveInteger
 import dataClasses.models.*
 import contracts.GameResultCommand

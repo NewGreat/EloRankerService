@@ -1,9 +1,11 @@
 package repositories
 
 import dataClasses.daos.GameResultDao
+import dataClasses.daos.LeaguePlayerDao
 import dataClasses.daos.RatingDao
 import dataClasses.mappers.ToGameResult
 import dataClasses.mappers.ToGameResultDao
+import dataClasses.mappers.ToLeaguePlayer
 import dataClasses.mappers.ToRating
 import dataClasses.models.*
 import org.joda.time.DateTime
@@ -73,36 +75,42 @@ fun InsertGameResult(gameResult: GameResult) : Unit {
         .executeUpdate()
 }
 
-// TODO: Take in a LeaguePlayer
-fun InsertLeaguePlayer(leagueId: Int, leaguePlayerName: String, userId: Int?, initialRating: Int, joinDate: DateTime){
+fun InsertLeaguePlayer(leaguePlayer: LeaguePlayer, initialRating: Int) {
     val sql2o = CreateDbDriver()
-    var con = sql2o.open()
-    con.createQuery("INSERT INTO EloRanker.LeaguePlayer " +
-        "(LeagueId, UserId, LeaguePlayerName, RatingUpdated) VALUES " +
-        "(:pLeagueId, :pUserId, :pLeaguePlayerName, :pRatingUpdated)")
-        .addParameter("pLeagueId", leagueId)
-        .addParameter("pUserId", userId)
-        .addParameter("pLeaguePlayerName", leaguePlayerName)
-        .addParameter("pRatingUpdated", joinDate)
-        .executeUpdate()
+    var con = sql2o.beginTransaction()
+    try {
+        con.createQuery("INSERT INTO EloRanker.LeaguePlayer " +
+            "(LeagueId, UserId, LeaguePlayerName, RatingUpdated) VALUES " +
+            "(:pLeagueId, :pUserId, :pLeaguePlayerName, :pRatingUpdated)")
+            .addParameter("pLeagueId", leaguePlayer.LeagueId)
+            .addParameter("pUserId", leaguePlayer.UserId)
+            .addParameter("pLeaguePlayerName", leaguePlayer.LeaguePlayerName)
+            .addParameter("pRatingUpdated", leaguePlayer.RatingUpdated)
+            .executeUpdate()
 
-    val leaguePlayerId = con.createQuery("SELECT LeaguePlayerId FROM EloRanker.LeaguePlayer " +
-        "WHERE LeagueId = :pLeagueId AND LeaguePlayerName = :pLeaguePlayerName")
-        .addParameter("pLeagueId", leagueId)
-        .addParameter("pLeaguePlayerName", leaguePlayerName)
-        .executeScalar(Int::class.java)
+        val leaguePlayerId = con.createQuery("SELECT LeaguePlayerId FROM EloRanker.LeaguePlayer " +
+            "WHERE LeagueId = :pLeagueId AND LeaguePlayerName = :pLeaguePlayerName")
+            .addParameter("pLeagueId", leaguePlayer.LeagueId)
+            .addParameter("pLeaguePlayerName", leaguePlayer.LeaguePlayerName)
+            .executeScalar(Int::class.java)
 
-    con.createQuery("INSERT INTO EloRanker.Rating " +
-        "(LeaguePlayerId, GameDate, Rating, GamesPlayed) VALUES " +
-        "(:pLeaguePlayerId, :pGameDate, :pRating, :pGamesPlayed)")
-        .addParameter("pLeaguePlayerId", leaguePlayerId)
-        .addParameter("pGameDate", joinDate)
-        .addParameter("pRating", initialRating)
-        .addParameter("pGamesPlayed", 0)
-        .executeUpdate()
+        con.createQuery("INSERT INTO EloRanker.Rating " +
+            "(LeaguePlayerId, GameDate, Rating, GamesPlayed) VALUES " +
+            "(:pLeaguePlayerId, :pGameDate, :pRating, :pGamesPlayed)")
+            .addParameter("pLeaguePlayerId", leaguePlayerId)
+            .addParameter("pGameDate", leaguePlayer.RatingUpdated)
+            .addParameter("pRating", initialRating)
+            .addParameter("pGamesPlayed", 0)
+            .executeUpdate()
+
+        con.commit()
+    } catch (e: Exception) {
+        con.rollback()
+        throw Exception("Could not create player: ${leaguePlayer.LeaguePlayerName}")
+    }
+
 }
 
-// TODO: Fetch as a LeaguePlayerDao
 fun GetLeaguePlayer(leagueId: Int, leaguePlayerName: String): LeaguePlayer? {
     val sql2o = CreateDbDriver()
     var con = sql2o.open()
@@ -111,11 +119,10 @@ fun GetLeaguePlayer(leagueId: Int, leaguePlayerName: String): LeaguePlayer? {
         "WHERE LeagueId = :pLeagueId AND LeaguePlayerName = :pLeaguePlayerName")
         .addParameter("pLeagueId", leagueId)
         .addParameter("pLeaguePlayerName", leaguePlayerName)
-        .executeAndFetchFirst(LeaguePlayer::class.java)
-    return leaguePlayer
+        .executeAndFetchFirst(LeaguePlayerDao::class.java)
+    return ToLeaguePlayer(leaguePlayer)
 }
 
-// TODO: Fetch as a LeaguePlayerDao
 fun GetLeaguePlayer(leagueId: Int, leaguePlayerId: Int): LeaguePlayer? {
     val sql2o = CreateDbDriver()
     var con = sql2o.open()
@@ -124,14 +131,14 @@ fun GetLeaguePlayer(leagueId: Int, leaguePlayerId: Int): LeaguePlayer? {
         "WHERE LeagueId = :pLeagueId AND LeaguePlayerId = :pLeaguePlayerId")
         .addParameter("pLeagueId", leagueId)
         .addParameter("pLeaguePlayerId", leaguePlayerId)
-        .executeAndFetchFirst(LeaguePlayer::class.java)
-    return leaguePlayer
+        .executeAndFetchFirst(LeaguePlayerDao::class.java)
+    return ToLeaguePlayer(leaguePlayer)
 }
 
 fun GetLeaguePlayerRating(leaguePlayerId: Int) : Rating {
     val sql2o = CreateDbDriver()
     var con = sql2o.open()
-    val ratingDao = con.createQuery("SELECT Rating, GamesPlayed " +
+    val ratingDao = con.createQuery("SELECT LeaguePlayerId, GameDate, Rating, GamesPlayed " +
         "FROM EloRanker.Rating " +
         "WHERE LeaguePlayerId = :pLeaguePlayerId " +
         "ORDER BY GameDate DESC LIMIT 1")
@@ -191,20 +198,28 @@ fun GetGameResultsOnOrAfterDate(leagueId: Int, dateTime: DateTime) : List<GameRe
 
 fun UpdateLeaguePlayerRating(newRating: Rating) {
     val sql2o = CreateDbDriver()
-    var con = sql2o.open()
-    con.createQuery("INSERT INTO EloRanker.Rating (LeaguePlayerId, GameDate, Rating, GamesPlayed) " +
-        "VALUES (:pLeaguePlayerId, :pGameDate, :pRating, :pGamesPlayed)")
-        .addParameter("pLeaguePlayerId", newRating.LeaguePlayerId)
-        .addParameter("pGameDate", newRating.GameDate)
-        .addParameter("pRating", newRating.Rating)
-        .addParameter("pGamesPlayed", newRating.GamesPlayed)
-        .executeUpdate()
+    var con = sql2o.beginTransaction()
+    try {
+        con.createQuery("INSERT INTO EloRanker.Rating (LeaguePlayerId, GameDate, Rating, GamesPlayed) " +
+            "VALUES (:pLeaguePlayerId, :pGameDate, :pRating, :pGamesPlayed)")
+            .addParameter("pLeaguePlayerId", newRating.LeaguePlayerId)
+            .addParameter("pGameDate", newRating.GameDate)
+            .addParameter("pRating", newRating.Rating)
+            .addParameter("pGamesPlayed", newRating.GamesPlayed)
+            .executeUpdate()
 
-    con.createQuery("UPDATE EloRanker.LeaguePlayer SET RatingUpdated = :pRatingUpdated " +
-        "WHERE LeaguePlayerId = :pLeaguePlayerId")
-        .addParameter("pRatingUpdated", newRating.GameDate)
-        .addParameter("pLeaguePlayerId", newRating.LeaguePlayerId)
-        .executeUpdate()
+        con.createQuery("UPDATE EloRanker.LeaguePlayer SET RatingUpdated = :pRatingUpdated " +
+            "WHERE LeaguePlayerId = :pLeaguePlayerId")
+            .addParameter("pRatingUpdated", newRating.GameDate)
+            .addParameter("pLeaguePlayerId", newRating.LeaguePlayerId)
+            .executeUpdate()
+
+        con.commit()
+    } catch (e: Exception) {
+        con.rollback()
+        throw Exception("Error updating rating for LeaguePlayer: ${newRating.LeaguePlayerId}")
+    }
+
 
 }
 
@@ -222,7 +237,6 @@ fun GetFullLeagueData(leagueId: Int): League {
     return league
 }
 
-// TODO: Fetch as a LeaguePlayerDao
 fun GetLeaguePlayers(leagueId: Int, leaguePlayerNames: List<String>) : List<LeaguePlayer?> {
     val sql2o = CreateDbDriver()
     var con = sql2o.open()
@@ -232,7 +246,7 @@ fun GetLeaguePlayers(leagueId: Int, leaguePlayerNames: List<String>) : List<Leag
         "AND LeaguePlayerName IN (${CreatePSForList(leaguePlayerNames)})")
         .addParameter("pLeagueId", leagueId)
     AddListParameters(query, leaguePlayerNames)
-    return query.executeAndFetch(LeaguePlayer::class.java)
+    return query.executeAndFetch(LeaguePlayerDao::class.java).map { ToLeaguePlayer(it) }
 }
 
 fun CreatePSForList(items: List<Any>) : String {

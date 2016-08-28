@@ -1,8 +1,10 @@
 package dataClasses.mappers
 
 import dataClasses.daos.GameResultDao
+import dataClasses.daos.LeaguePlayerDao
 import dataClasses.daos.RatingDao
 import dataClasses.models.GameResult
+import dataClasses.models.LeaguePlayer
 import dataClasses.models.Rating
 import dataClasses.models.Result
 import org.joda.time.DateTimeZone
@@ -27,5 +29,15 @@ fun ToRating(ratingDao: RatingDao) : Rating {
         GameDate = ratingDao.GameDate.toDateTime(DateTimeZone.UTC),
         Rating = ratingDao.Rating,
         GamesPlayed = ratingDao.GamesPlayed
+    )
+}
+
+fun ToLeaguePlayer(leaguePlayerDao: LeaguePlayerDao) : LeaguePlayer {
+    return LeaguePlayer(
+        LeaguePlayerId = leaguePlayerDao.LeaguePlayerId,
+        LeagueId = leaguePlayerDao.LeagueId,
+        UserId = leaguePlayerDao.UserId,
+        LeaguePlayerName = leaguePlayerDao.LeaguePlayerName,
+        RatingUpdated = leaguePlayerDao.RatingUpdated.toDateTime(DateTimeZone.UTC)
     )
 }

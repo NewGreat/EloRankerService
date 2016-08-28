@@ -1,14 +1,17 @@
 package server
 
+import com.fasterxml.jackson.databind.MapperFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import contracts.AddPlayerCommand
 import helpers.ParseDateTime
 import io.netty.handler.codec.http.HttpMethod
 import managers.AddLeaguePlayer
 import managers.ConvertToGameResults
 import contracts.GameResultCommand
+import managers.ConvertToLeaguePlayers
 import org.wasabi.app.AppServer
 import org.wasabi.interceptors.enableCORS
 import org.wasabi.protocol.http.CORSEntry
@@ -19,7 +22,9 @@ import org.wasabi.routing.routeHandler
  * Created by william on 8/17/16.
  */
 
-val mapper: ObjectMapper = jacksonObjectMapper().configure(SerializationFeature.INDENT_OUTPUT, false)
+val mapper: ObjectMapper = jacksonObjectMapper()
+    .configure(SerializationFeature.INDENT_OUTPUT, false)
+    .configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true)
 
 fun main(args: Array<String>) {
     StartServer()
@@ -30,7 +35,7 @@ fun StartServer(): Unit {
 
     server.get("/", { response.send("Hello World!") })
     server.post("/games/record", RecordLeagueGameResults)
-    server.post("/player/create", AddLeaguePlayer)
+    server.post("/players/add", AddLeaguePlayers)
     server.post("/ratings/recalculate", RecalculateRatings)
     server.exception(Exception::class, {
         response.setStatus(StatusCodes.PreconditionFailed)
@@ -49,15 +54,13 @@ fun StartServer(): Unit {
     server.start()
 }
 
-val AddLeaguePlayer = routeHandler {
+val AddLeaguePlayers = routeHandler {
     val leagueId = request.bodyParams["leagueId"] as Int
-    val leaguePlayerName = request.bodyParams["leaguePlayerName"] as String
-    val userId = request.bodyParams["userId"] as Int?
-    val joinDateString = request.bodyParams["joinDate"] as String
-    val joinDate = ParseDateTime(joinDateString)
-
-    AddLeaguePlayer(leagueId, leaguePlayerName, userId, joinDate)
-    response.send("Added $leaguePlayerName to League $leagueId", "application/json")
+    val json = mapper.writeValueAsString(request.bodyParams["leaguePlayers"])
+    val addPlayerCommands : List<AddPlayerCommand> = mapper.readValue(json)
+    val leaguePlayers = ConvertToLeaguePlayers(leagueId, addPlayerCommands)
+    val (successful, failed) = managers.AddLeaguePlayers(leagueId, leaguePlayers)
+    response.send("Added $successful to League $leagueId. Failed to add $failed", "application/json")
 }
 
 val RecordLeagueGameResults = routeHandler {
