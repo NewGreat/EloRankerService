@@ -3,10 +3,8 @@ package repositories
 import dataClasses.daos.GameResultDao
 import dataClasses.daos.LeaguePlayerDao
 import dataClasses.daos.RatingDao
-import dataClasses.mappers.ToGameResult
-import dataClasses.mappers.ToGameResultDao
-import dataClasses.mappers.ToLeaguePlayer
-import dataClasses.mappers.ToRating
+import dataClasses.daos.TournamentDao
+import dataClasses.mappers.*
 import dataClasses.models.*
 import org.joda.time.DateTime
 import org.joda.time.DateTimeZone
@@ -106,7 +104,7 @@ fun InsertLeaguePlayer(leaguePlayer: LeaguePlayer, initialRating: Int) {
         con.commit()
     } catch (e: Exception) {
         con.rollback()
-        throw Exception("Could not create player: ${leaguePlayer.LeaguePlayerName}")
+        throw Exception("Could not create player: ${leaguePlayer.LeaguePlayerName}: $e")
     }
 
 }
@@ -185,7 +183,7 @@ fun GetGameResultsOnOrAfterDate(leagueId: Int, dateTime: DateTime) : List<GameRe
     val sql2o = CreateDbDriver()
     var con = sql2o.open()
     val gameResultDaos = con.createQuery("""
-        SELECT LeagueId, FirstLeaguePlayerId, SecondLeaguePlayerId, Result, GameDate
+        SELECT GameResultId, LeagueId, FirstLeaguePlayerId, SecondLeaguePlayerId, Result, GameDate
         FROM EloRanker.GameResult
         WHERE LeagueId = :pLeagueId
         AND GameDate >= :pDateTime;
@@ -217,13 +215,11 @@ fun UpdateLeaguePlayerRating(newRating: Rating) {
         con.commit()
     } catch (e: Exception) {
         con.rollback()
-        throw Exception("Error updating rating for LeaguePlayer: ${newRating.LeaguePlayerId}")
+        throw Exception("Error updating rating for LeaguePlayer: ${newRating.LeaguePlayerId}: $e")
     }
-
-
 }
 
-fun GetFullLeagueData(leagueId: Int): League {
+fun GetLeague(leagueId: Int): League {
     val sql2o = CreateDbDriver()
     var con = sql2o.open()
     val league = con.createQuery("SELECT l.LeagueId, l.Name, l.Description, " +
@@ -247,6 +243,96 @@ fun GetLeaguePlayers(leagueId: Int, leaguePlayerNames: List<String>) : List<Leag
         .addParameter("pLeagueId", leagueId)
     AddListParameters(query, leaguePlayerNames)
     return query.executeAndFetch(LeaguePlayerDao::class.java).map { ToLeaguePlayer(it) }
+}
+
+fun GetTournamentInfo(leagueId: Int, tournamentAbbreviation: String) : Tournament {
+    val sql2o = CreateDbDriver()
+    var con = sql2o.open()
+    val tournamentDao = con.createQuery("""
+        SELECT t.TournamentId, t.Abbreviation, t.Name, t.LeagueId, t.Description, t.StartDate, t.EndDate,
+        tm.WinPoints, tm.DrawPoints, tm.LosePoints
+        FROM EloRanker.Tournament t
+        JOIN EloRanker.TournamentMetadata tm
+        ON t.TournamentId = tm.TournamentId
+        WHERE t.LeagueId = :pLeagueId
+        AND t.Abbreviation = :pTournamentAbbreviation
+        """)
+            .addParameter("pLeagueId", leagueId)
+            .addParameter("pTournamentAbbreviation", tournamentAbbreviation)
+            .executeAndFetchFirst(TournamentDao::class.java)
+    return ToTournament(tournamentDao)
+}
+
+fun GetTournamentsForLeague(leagueId: Int) : List<Tournament> {
+    val sql2o = CreateDbDriver()
+    var con = sql2o.open()
+    val tournamentDao = con.createQuery("""
+        SELECT t.TournamentId, t.Abbreviation, t.Name, t.LeagueId, t.Description, t.StartDate, t.EndDate,
+        tm.WinPoints, tm.DrawPoints, tm.LosePoints
+        FROM EloRanker.Tournament t
+        JOIN EloRanker.TournamentMetadata tm
+        ON t.TournamentId = tm.TournamentId
+        WHERE t.LeagueId = :pLeagueId
+        """)
+        .addParameter("pLeagueId", leagueId)
+        .executeAndFetch(TournamentDao::class.java)
+    return tournamentDao.map {ToTournament(it)}
+}
+
+fun GetGameResultsForTournament(tournamentId: Int) : List<GameResult> {
+    val sql2o = CreateDbDriver()
+    var con = sql2o.open()
+    val gameResultDaos = con.createQuery("""
+        SELECT GameResultId, LeagueId, FirstLeaguePlayerId, SecondLeaguePlayerId, Result, GameDate
+        FROM EloRanker.GameResult gr
+        JOIN EloRanker.TournamentGameResult tgr
+        ON gr.GameResultId = tgr.GameResultId
+        WHERE tgr.TournamentId = :pTournamentId;
+        """)
+        .addParameter("pTournamentId", tournamentId)
+        .executeAndFetch(GameResultDao::class.java)
+    return gameResultDaos.map { ToGameResult(it)}
+}
+
+fun InsertTournament(tournament: Tournament) {
+    val tournamentDao = ToTournamentDao(tournament)
+    val sql2o = CreateDbDriver()
+    var con = sql2o.beginTransaction()
+    try {
+        con.createQuery("""
+        INSERT INTO EloRanker.Tournament (Abbreviation, Name, LeagueId, Description, StartDate, EndDate)
+        VALUES (:pAbbreviation, :pName, :pLeagueId, :pDescription, :pStartDate, :pEndDate);
+        """)
+            .addParameter("pAbbreviation", tournamentDao.Abbreviation)
+            .addParameter("pName", tournamentDao.Name)
+            .addParameter("pLeagueId", tournamentDao.LeagueId)
+            .addParameter("pDescription", tournamentDao.Description)
+            .addParameter("pStartDate", tournamentDao.StartDate)
+            .addParameter("pEndDate", tournamentDao.EndDate)
+            .executeUpdate()
+
+        val tournamentId = con.createQuery("SELECT TournamentId FROM EloRanker.Tournament " +
+            "WHERE LeagueId = :pLeagueId AND Name = :pName")
+            .addParameter("pLeagueId", tournamentDao.LeagueId)
+            .addParameter("pName", tournamentDao.Name)
+            .executeScalar(Int::class.java)
+
+        con.createQuery("""
+        INSERT INTO EloRanker.TournamentMetadata (TournamentId, WinPoints, DrawPoints, LosePoints)
+        VALUES (:pTournamentId, :pWinPoints, :pDrawPoints, :pLosePoints);
+        """)
+            .addParameter("pTournamentId", tournamentId)
+            .addParameter("pWinPoints", tournamentDao.WinPoints)
+            .addParameter("pDrawPoints", tournamentDao.DrawPoints)
+            .addParameter("pLosePoints", tournamentDao.LosePoints)
+            .executeUpdate()
+
+        con.commit()
+    } catch (e: Exception) {
+        con.rollback()
+        throw Exception("Error creating tournament ${tournament.Name} for League: ${tournament.LeagueId}: $e")
+    }
+
 }
 
 fun CreatePSForList(items: List<Any>) : String {

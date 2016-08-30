@@ -4,7 +4,7 @@ import contracts.AddPlayerCommand
 import dataClasses.models.LeaguePlayer
 import helpers.ParseDateTime
 import org.joda.time.DateTime
-import repositories.GetFullLeagueData
+import repositories.GetLeague
 import repositories.*
 
 /**
@@ -24,7 +24,7 @@ fun ConvertToLeaguePlayers(leagueId: Int, addPlayerCommands: List<AddPlayerComma
 }
 
 fun AddLeaguePlayer(leagueId: Int, leaguePlayerName: String, userId: Int?, joinDate: DateTime): Unit {
-    val league = GetFullLeagueData(leagueId)
+    val league = GetLeague(leagueId)
     val leaguePlayer = LeaguePlayer(
         LeagueId = leagueId,
         LeaguePlayerName = leaguePlayerName,
@@ -38,7 +38,7 @@ fun AddLeaguePlayer(leagueId: Int, leaguePlayerName: String, userId: Int?, joinD
 fun AddLeaguePlayers(leagueId: Int, leaguePlayers: List<LeaguePlayer>) : Pair<List<String>,List<String>> {
     var addedLeaguePlayerNames = mutableListOf<String>()
     var failedLeaguePlayerNames = mutableListOf<String>()
-    val league = GetFullLeagueData(leagueId)
+    val league = GetLeague(leagueId)
     for (leaguePlayer in leaguePlayers) {
         try {
             val leaguePlayer = LeaguePlayer(

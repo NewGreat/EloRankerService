@@ -57,10 +57,40 @@ CREATE TABLE IF NOT EXISTS EloRanker.LeagueAdmin (
 
 DROP TABLE IF EXISTS EloRanker.GameResult;
 CREATE TABLE IF NOT EXISTS EloRanker.GameResult (
+	GameResultId INT NOT NULL AUTO_INCREMENT,
     LeagueId INT NOT NULL,
     FirstLeaguePlayerId INT NOT NULL,
     SecondLeaguePlayerId INT NOT NULL,
     Result INT NOT NULL,
     GameDate DATETIME NOT NULL,
+	PRIMARY KEY (GameResultId),
     INDEX `LeagueIdGameDate` (LeagueId, GameDate)
+);
+
+DROP TABLE IF EXISTS EloRanker.Tournament;
+CREATE TABLE IF NOT EXISTS EloRanker.Tournament (
+	TournamentId INT NOT NULL AUTO_INCREMENT,
+	Abbreviation VARCHAR(15),
+	Name VARCHAR(127),
+	LeagueId INT NOT NULL,
+	Description VARCHAR(511),
+	PRIMARY KEY (TournamentId),
+	UNIQUE INDEX (LeagueId, Name),
+	UNIQUE INDEX (LeagueId, Abbreviation)
+);
+
+DROP TABLE IF EXISTS EloRanker.TournamentMetadata;
+CREATE TABLE IF NOT EXISTS EloRanker.TournamentMetadata (
+	TournamentId INT NOT NULL AUTO_INCREMENT,
+	WinPoints FLOAT,
+	DrawPoints FLOAT,
+	LosePoints FLOAT,
+	PRIMARY KEY (TournamentId)
+);
+
+DROP TABLE IF EXISTS EloRanker.TournamentGameResult;
+CREATE TABLE IF NOT EXISTS EloRanker.TournamentGameResult (
+	TournamentId INT NOT NULL,	
+	GameResultId INT NOT NULL,
+	PRIMARY KEY (TournamentId, GameResultId)
 );

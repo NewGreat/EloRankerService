@@ -6,11 +6,11 @@ import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import contracts.AddPlayerCommand
+import contracts.GameResultCommand
+import dataClasses.models.Tournament
 import helpers.ParseDateTime
 import io.netty.handler.codec.http.HttpMethod
-import managers.AddLeaguePlayer
 import managers.ConvertToGameResults
-import contracts.GameResultCommand
 import managers.ConvertToLeaguePlayers
 import org.wasabi.app.AppServer
 import org.wasabi.interceptors.enableCORS
@@ -37,6 +37,7 @@ fun StartServer(): Unit {
     server.post("/games/record", RecordLeagueGameResults)
     server.post("/players/add", AddLeaguePlayers)
     server.post("/ratings/recalculate", RecalculateRatings)
+    server.post("/tournaments/create", CreateTournament)
     server.exception(Exception::class, {
         response.setStatus(StatusCodes.PreconditionFailed)
         response.send("Error: ${exception.message}")
@@ -79,4 +80,32 @@ val RecalculateRatings = routeHandler {
     val recalculateDateString = request.bodyParams["recalculateDate"] as String
     val recalculateDate = ParseDateTime(recalculateDateString)
     managers.RecalculateRatings(leagueId, recalculateDate)
+}
+
+val CreateTournament = routeHandler {
+    val leagueId = request.bodyParams["leagueId"] as Int
+    val abbreviation = request.bodyParams["abbreviation"] as String
+    val name = request.bodyParams["name"] as String
+    val description = request.bodyParams["description"] as String
+    val startDateString = request.bodyParams["startDate"] as String
+    val startDate = ParseDateTime(startDateString)
+    val endDateString = request.bodyParams["endDate"] as String
+    val endDate = ParseDateTime(endDateString)
+    val winPoints = request.bodyParams["winPoints"] as Double
+    val drawPoints = request.bodyParams["drawPoints"] as Double
+    val losePoints = request.bodyParams["losePoints"] as Double
+    val tournament = Tournament (
+        TournamentId = 0,
+        LeagueId = leagueId,
+        Abbreviation = abbreviation,
+        Name = name,
+        Description = description,
+        StartDate = startDate,
+        EndDate = endDate,
+        WinPoints = winPoints,
+        DrawPoints = drawPoints,
+        LosePoints = losePoints
+    )
+    managers.CreateTournament(tournament)
+    response.send("Created tournament $name ($abbreviation) for League $leagueId", "application/json")
 }

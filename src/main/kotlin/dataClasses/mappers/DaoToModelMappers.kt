@@ -3,10 +3,8 @@ package dataClasses.mappers
 import dataClasses.daos.GameResultDao
 import dataClasses.daos.LeaguePlayerDao
 import dataClasses.daos.RatingDao
-import dataClasses.models.GameResult
-import dataClasses.models.LeaguePlayer
-import dataClasses.models.Rating
-import dataClasses.models.Result
+import dataClasses.daos.TournamentDao
+import dataClasses.models.*
 import org.joda.time.DateTimeZone
 
 /**
@@ -15,6 +13,7 @@ import org.joda.time.DateTimeZone
 
 fun ToGameResult(gameResultDao: GameResultDao) : GameResult {
     return GameResult (
+        GameResultId = gameResultDao.GameResultId,
         LeagueId = gameResultDao.LeagueId,
         FirstLeaguePlayerId = gameResultDao.FirstLeaguePlayerId,
         SecondLeaguePlayerId = gameResultDao.SecondLeaguePlayerId,
@@ -39,5 +38,20 @@ fun ToLeaguePlayer(leaguePlayerDao: LeaguePlayerDao) : LeaguePlayer {
         UserId = leaguePlayerDao.UserId,
         LeaguePlayerName = leaguePlayerDao.LeaguePlayerName,
         RatingUpdated = leaguePlayerDao.RatingUpdated.toDateTime(DateTimeZone.UTC)
+    )
+}
+
+fun ToTournament(tournamentDao: TournamentDao) : Tournament {
+    return Tournament(
+        TournamentId = tournamentDao.TournamentId,
+        LeagueId = tournamentDao.LeagueId,
+        Abbreviation = tournamentDao.Abbreviation,
+        Name = tournamentDao.Name,
+        Description = tournamentDao.Description,
+        StartDate = tournamentDao.StartDate.toDateTime(DateTimeZone.UTC),
+        EndDate = tournamentDao.EndDate.toDateTime(DateTimeZone.UTC),
+        WinPoints = tournamentDao.WinPoints,
+        DrawPoints = tournamentDao.DrawPoints,
+        LosePoints = tournamentDao.LosePoints
     )
 }

@@ -3,10 +3,8 @@ package dataClasses.mappers
 import dataClasses.daos.GameResultDao
 import dataClasses.daos.LeaguePlayerDao
 import dataClasses.daos.RatingDao
-import dataClasses.models.GameResult
-import dataClasses.models.LeaguePlayer
-import dataClasses.models.Rating
-import dataClasses.models.Result
+import dataClasses.daos.TournamentDao
+import dataClasses.models.*
 import org.joda.time.DateTimeZone
 
 /**
@@ -15,6 +13,7 @@ import org.joda.time.DateTimeZone
 
 fun ToGameResultDao(gameResult: GameResult) : GameResultDao {
     return GameResultDao(
+        GameResultId = gameResult.GameResultId,
         LeagueId = gameResult.LeagueId,
         FirstLeaguePlayerId = gameResult.FirstLeaguePlayerId,
         SecondLeaguePlayerId = gameResult.SecondLeaguePlayerId,
@@ -39,5 +38,20 @@ fun ToLeaguePlayerDao(leaguePlayer: LeaguePlayer) : LeaguePlayerDao {
         UserId = leaguePlayer.UserId,
         LeaguePlayerName = leaguePlayer.LeaguePlayerName,
         RatingUpdated = leaguePlayer.RatingUpdated
+    )
+}
+
+fun ToTournamentDao(tournament: Tournament) : TournamentDao {
+    return TournamentDao(
+        TournamentId = tournament.TournamentId,
+        LeagueId = tournament.LeagueId,
+        Abbreviation = tournament.Abbreviation,
+        Name = tournament.Name,
+        StartDate = tournament.StartDate,
+        EndDate = tournament.EndDate,
+        Description = tournament.Description,
+        WinPoints = tournament.WinPoints,
+        DrawPoints = tournament.DrawPoints,
+        LosePoints = tournament.LosePoints
     )
 }

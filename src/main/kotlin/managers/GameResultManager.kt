@@ -1,12 +1,11 @@
 package managers
 
-import contracts.AddPlayerCommand
-import helpers.IsPositiveInteger
-import dataClasses.models.*
 import contracts.GameResultCommand
+import dataClasses.models.*
+import helpers.IsPositiveInteger
+import org.funktionale.memoization.memoize
 import org.joda.time.DateTime
 import repositories.*
-import org.funktionale.memoization.memoize
 
 /**
  * Created by william on 8/18/16.
@@ -41,6 +40,7 @@ fun ConvertToGameResults(leagueId: Int, gameDate: DateTime, gameResultCommands: 
     }
     return gameResultCommands.map {
         GameResult(
+            GameResultId = 0,
             LeagueId = leagueId,
             FirstLeaguePlayerId = leaguePlayerDict[it.LeaguePlayerName1]!!.LeaguePlayerId,
             SecondLeaguePlayerId = leaguePlayerDict[it.LeaguePlayerName2]!!.LeaguePlayerId,
@@ -51,7 +51,7 @@ fun ConvertToGameResults(leagueId: Int, gameDate: DateTime, gameResultCommands: 
 }
 
 fun RecordLeagueGameResults(gameResults: List<GameResult>): Unit {
-    val getLeague = { leagueId: Int -> GetFullLeagueData(leagueId)}.memoize()
+    val getLeague = { leagueId: Int -> GetLeague(leagueId)}.memoize()
     gameResults.forEach { RecordGameResult(it, getLeague(it.LeagueId)) }
 }
 
