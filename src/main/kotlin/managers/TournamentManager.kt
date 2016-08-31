@@ -60,9 +60,10 @@ fun GetTournamentResults(leagueId: Int, tournamentAbbreviation: String) : List<T
     }
 
     for((leaguePlayerId, tr) in tournamentResults) {
-        tr.TotalPoints = tournament.WinPoints * tr.GamesWon
-            + tournament.DrawPoints * tr.GamesDrawn
-            + tournament.LosePoints * tr.GamesLost
+        val winPts = tournament.WinPoints * tr.GamesWon.toDouble()
+        val drawPts = tournament.DrawPoints * tr.GamesDrawn.toDouble()
+        val lossPts = tournament.LosePoints * tr.GamesLost.toDouble()
+        tr.TotalPoints = winPts + drawPts + lossPts
     }
 
     val tournamentPerformances = tournamentResults.values
