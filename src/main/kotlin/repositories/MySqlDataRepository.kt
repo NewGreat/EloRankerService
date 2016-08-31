@@ -283,7 +283,7 @@ fun GetGameResultsForTournament(tournamentId: Int) : List<GameResult> {
     val sql2o = CreateDbDriver()
     var con = sql2o.open()
     val gameResultDaos = con.createQuery("""
-        SELECT GameResultId, LeagueId, FirstLeaguePlayerId, SecondLeaguePlayerId, Result, GameDate
+        SELECT gr.GameResultId, gr.LeagueId, gr.FirstLeaguePlayerId, gr.SecondLeaguePlayerId, gr.Result, gr.GameDate
         FROM EloRanker.GameResult gr
         JOIN EloRanker.TournamentGameResult tgr
         ON gr.GameResultId = tgr.GameResultId

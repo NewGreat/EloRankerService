@@ -74,6 +74,8 @@ CREATE TABLE IF NOT EXISTS EloRanker.Tournament (
 	Name VARCHAR(127),
 	LeagueId INT NOT NULL,
 	Description VARCHAR(511),
+	StartDate DATETIME NOT NULL,
+	EndDate DATETIME NOT NULL,
 	PRIMARY KEY (TournamentId),
 	UNIQUE INDEX (LeagueId, Name),
 	UNIQUE INDEX (LeagueId, Abbreviation)

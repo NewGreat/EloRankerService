@@ -38,6 +38,7 @@ fun StartServer(): Unit {
     server.post("/players/add", AddLeaguePlayers)
     server.post("/ratings/recalculate", RecalculateRatings)
     server.post("/tournaments/create", CreateTournament)
+    server.post("/tournaments/results", GetTournamentResults)
     server.exception(Exception::class, {
         response.setStatus(StatusCodes.PreconditionFailed)
         response.send("Error: ${exception.message}")
@@ -108,4 +109,11 @@ val CreateTournament = routeHandler {
     )
     managers.CreateTournament(tournament)
     response.send("Created tournament $name ($abbreviation) for League $leagueId", "application/json")
+}
+
+val GetTournamentResults = routeHandler {
+    val leagueId = request.bodyParams["leagueId"] as Int
+    val abbreviation = request.bodyParams["abbreviation"] as String
+    val tournamentPerformances = managers.GetTournamentResults(leagueId, abbreviation)
+    response.send(tournamentPerformances, "application/json")
 }
