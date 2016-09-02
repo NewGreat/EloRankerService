@@ -12,6 +12,8 @@ import helpers.ParseDateTime
 import io.netty.handler.codec.http.HttpMethod
 import managers.ConvertToGameResults
 import managers.ConvertToLeaguePlayers
+import org.joda.time.DateTime
+import org.joda.time.DateTimeZone
 import org.wasabi.app.AppServer
 import org.wasabi.interceptors.enableCORS
 import org.wasabi.protocol.http.CORSEntry
@@ -38,7 +40,8 @@ fun StartServer(): Unit {
     server.post("/players/add", AddLeaguePlayers)
     server.post("/ratings/recalculate", RecalculateRatings)
     server.post("/tournaments/create", CreateTournament)
-    server.post("/tournaments/results", GetTournamentResults)
+    server.get("/tournaments/results", GetTournamentResults)
+    server.get("/leagues/ratings", GetLeagueRatings)
     server.exception(Exception::class, {
         response.setStatus(StatusCodes.PreconditionFailed)
         response.send("Error: ${exception.message}")
@@ -47,7 +50,7 @@ fun StartServer(): Unit {
     // Enable CORS and create an OPTIONS route for every existing route
     val corsEntry = CORSEntry (
         path = "*",
-        origins = "localhost:3474",
+        origins = "localhost:8080",
         methods = setOf(HttpMethod.GET, HttpMethod.HEAD, HttpMethod.OPTIONS, HttpMethod.POST),
         headers = "Origin, X-Requested-With, Content-Type, Accept, Access-Control-Allow-Origin",
         credentials = ""
@@ -112,8 +115,14 @@ val CreateTournament = routeHandler {
 }
 
 val GetTournamentResults = routeHandler {
-    val leagueId = request.bodyParams["leagueId"] as Int
-    val abbreviation = request.bodyParams["abbreviation"] as String
+    val leagueId = request.queryParams["leagueId"]!!.toInt()
+    val abbreviation = request.queryParams["abbreviation"]!!
     val tournamentPerformances = managers.GetTournamentResults(leagueId, abbreviation)
     response.send(tournamentPerformances, "application/json")
+}
+
+val GetLeagueRatings = routeHandler {
+    val leagueId = request.queryParams["leagueId"]!!.toInt()
+    val ratings = managers.GetRatingsForLeagueOnDate(leagueId, DateTime(DateTimeZone.UTC))
+    response.send(ratings, "application/json")
 }
