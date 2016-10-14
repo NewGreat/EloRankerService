@@ -18,7 +18,8 @@ fun ToGameResult(gameResultDao: GameResultDao) : GameResult {
         FirstLeaguePlayerId = gameResultDao.FirstLeaguePlayerId,
         SecondLeaguePlayerId = gameResultDao.SecondLeaguePlayerId,
         Result = Result.FromInt(gameResultDao.Result),
-        GameDate = gameResultDao.GameDate.toDateTime(DateTimeZone.UTC)
+        GameDate = gameResultDao.GameDate.toDateTime(DateTimeZone.UTC),
+        Tournaments = mutableListOf()
     )
 }
 

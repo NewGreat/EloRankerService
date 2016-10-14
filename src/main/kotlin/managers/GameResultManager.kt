@@ -18,24 +18,30 @@ fun GetLeaguePlayerFromInfo(leagueId: Int, leaguePlayerInfo: String) : LeaguePla
 }
 
 fun ConvertToGameResults(leagueId: Int, gameDate: DateTime, gameResultCommands: List<GameResultCommand>) : List<GameResult> {
-    var leaguePlayerNames = mutableListOf<String>()
+    var leaguePlayerNames = mutableSetOf<String>()
+    val tournamentAbbreviations = mutableSetOf<String>()
     gameResultCommands.forEach { gameResultCommand ->
-        leaguePlayerNames.add(gameResultCommand.LeaguePlayerName1)
-        leaguePlayerNames.add(gameResultCommand.LeaguePlayerName2)
+        if (!leaguePlayerNames.add(gameResultCommand.LeaguePlayerName1))
+            throw Exception("Player ${gameResultCommand.LeaguePlayerName1} cannot play two games at the same time")
+        if (!leaguePlayerNames.add(gameResultCommand.LeaguePlayerName2))
+            throw Exception("Player ${gameResultCommand.LeaguePlayerName2} cannot play two games at the same time")
+        tournamentAbbreviations.addAll(gameResultCommand.TournamentAbbreviations)
     }
 
-    val leaguePlayers = GetLeaguePlayers(leagueId, leaguePlayerNames)
-    if (leaguePlayers.size != leaguePlayerNames.size)
-        throw Exception("Not all players could be found in league $leagueId")
+    val leaguePlayers = GetLeaguePlayers(leagueId, leaguePlayerNames.toList())
+    val tournaments = GetTournaments(leagueId, tournamentAbbreviations.toList())
+    if (tournaments.size != tournamentAbbreviations.size)
+        throw Exception("Not all tournaments could be found")
+
+    val tournamentDict : Map<String, Tournament> = tournaments.associateBy({it.Abbreviation}, {it})
 
     var leaguePlayerDict = hashMapOf<String, LeaguePlayer>()
     for (leaguePlayer in leaguePlayers) {
+        // Throw an exception if a player cannot be found in the league
         if (leaguePlayer == null)
             throw Exception("Not all players could be found in league $leagueId")
         if (leaguePlayer.RatingUpdated >= gameDate)
             throw Exception("Player ${leaguePlayer.LeaguePlayerName} has already played a game on or before $gameDate")
-        if (leaguePlayerDict.containsKey(leaguePlayer.LeaguePlayerName))
-            throw Exception("Player ${leaguePlayer.LeaguePlayerName} cannot play two games at the same time")
         leaguePlayerDict[leaguePlayer.LeaguePlayerName] = leaguePlayer
     }
     return gameResultCommands.map {
@@ -45,7 +51,10 @@ fun ConvertToGameResults(leagueId: Int, gameDate: DateTime, gameResultCommands: 
             FirstLeaguePlayerId = leaguePlayerDict[it.LeaguePlayerName1]!!.LeaguePlayerId,
             SecondLeaguePlayerId = leaguePlayerDict[it.LeaguePlayerName2]!!.LeaguePlayerId,
             Result = Result.FromInt(it.Result),
-            GameDate = gameDate
+            GameDate = gameDate,
+            Tournaments = it.TournamentAbbreviations.map{
+                tournamentDict[it]!!
+            }
         )
     }
 }

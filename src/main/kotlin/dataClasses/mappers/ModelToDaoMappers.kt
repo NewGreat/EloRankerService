@@ -18,7 +18,8 @@ fun ToGameResultDao(gameResult: GameResult) : GameResultDao {
         FirstLeaguePlayerId = gameResult.FirstLeaguePlayerId,
         SecondLeaguePlayerId = gameResult.SecondLeaguePlayerId,
         Result = Result.ToInt(gameResult.Result),
-        GameDate = gameResult.GameDate
+        GameDate = gameResult.GameDate,
+        Tournaments = gameResult.Tournaments.map{ToTournamentDao(it)}
     )
 }
 

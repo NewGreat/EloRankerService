@@ -11,5 +11,6 @@ data class GameResultDao(
     val FirstLeaguePlayerId: Int,
     val SecondLeaguePlayerId: Int,
     val Result: Int,
-    val GameDate: DateTime
+    val GameDate: DateTime,
+    val Tournaments: List<TournamentDao>
 )

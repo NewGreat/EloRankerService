@@ -11,5 +11,6 @@ data class GameResult(
     val FirstLeaguePlayerId: Int,
     val SecondLeaguePlayerId: Int,
     val Result: Result,
-    val GameDate: DateTime
+    val GameDate: DateTime,
+    val Tournaments: List<Tournament>
 )

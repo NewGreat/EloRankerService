@@ -40,8 +40,8 @@ fun StartServer(): Unit {
     server.post("/players/add", AddLeaguePlayers)
     server.post("/ratings/recalculate", RecalculateRatings)
     server.post("/tournaments/create", CreateTournament)
-    server.get("/tournaments/results", GetTournamentResults)
-    server.get("/leagues/ratings", GetLeagueRatings)
+    server.get("/leagues/:leagueId/tournaments/:tournament/results", GetTournamentResults)
+    server.get("/leagues/:leagueId/ratings", GetLeagueRatings)
     server.exception(Exception::class, {
         response.setStatus(StatusCodes.PreconditionFailed)
         response.send("Error: ${exception.message}")
@@ -50,7 +50,7 @@ fun StartServer(): Unit {
     // Enable CORS and create an OPTIONS route for every existing route
     val corsEntry = CORSEntry (
         path = "*",
-        origins = "localhost:8080",
+        origins = "http://localhost:8080",
         methods = setOf(HttpMethod.GET, HttpMethod.HEAD, HttpMethod.OPTIONS, HttpMethod.POST),
         headers = "Origin, X-Requested-With, Content-Type, Accept, Access-Control-Allow-Origin",
         credentials = ""
@@ -115,14 +115,14 @@ val CreateTournament = routeHandler {
 }
 
 val GetTournamentResults = routeHandler {
-    val leagueId = request.queryParams["leagueId"]!!.toInt()
-    val abbreviation = request.queryParams["abbreviation"]!!
+    val leagueId = request.routeParams["leagueId"]!!.toInt()
+    val abbreviation = request.routeParams["tournament"]!!
     val tournamentPerformances = managers.GetTournamentResults(leagueId, abbreviation)
     response.send(tournamentPerformances, "application/json")
 }
 
 val GetLeagueRatings = routeHandler {
-    val leagueId = request.queryParams["leagueId"]!!.toInt()
+    val leagueId = request.routeParams["leagueId"]!!.toInt()
     val ratings = managers.GetRatingsForLeagueOnDate(leagueId, DateTime(DateTimeZone.UTC))
     response.send(ratings, "application/json")
 }

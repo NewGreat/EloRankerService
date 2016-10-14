@@ -6,5 +6,6 @@ package contracts
 data class GameResultCommand(
     val LeaguePlayerName1: String,
     val LeaguePlayerName2: String,
-    val Result: Int
+    val Result: Int,
+    val TournamentAbbreviations: List<String>
 )
